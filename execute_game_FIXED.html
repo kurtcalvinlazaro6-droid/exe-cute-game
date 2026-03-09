@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Exe.cute: Code Sprint</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0); }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.1; pointer-events: none; }
+        .matrix-bg canvas { width: 100%; height: 100%; }
+        
+        .login-screen, .game-screen, .leaderboard-screen, .game-over {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; padding: 20px;
+        }
+        .game-screen, .leaderboard-screen, .game-over { display: none; }
+        
+        .login-box {
+            background: rgba(255,255,255,0.05); border: 2px solid #00ff88; border-radius: 20px;
+            padding: 40px; text-align: center; max-width: 400px; width: 100%;
+            box-shadow: 0 0 40px rgba(0,255,136,0.3);
+        }
+        h1 { color: #00ff88; font-family: Impact, sans-serif; font-size: 32px; margin-bottom: 10px; letter-spacing: 2px; }
+        h2 { font-size: 14px; color: #888; margin-bottom: 30px; }
+        
+        input {
+            width: 100%; padding: 15px; font-size: 18px; font-family: monospace;
+            background: rgba(0,0,0,0.5); border: 2px solid #00d4ff; border-radius: 10px;
+            color: #fff; margin-bottom: 15px; text-align: center;
+        }
+        
+        button {
+            width: 100%; padding: 15px; font-size: 18px; font-weight: bold;
+            background: linear-gradient(45deg, #00ff88, #00d4ff); border: none; border-radius: 10px;
+            color: #000; cursor: pointer; margin-bottom: 10px;
+            touch-action: manipulation; -webkit-touch-callout: none;
+            user-select: none; -webkit-user-select: none;
+        }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        .btn-secondary { background: transparent; border: 2px solid #00d4ff; color: #00d4ff; }
+        
+        .game-header {
+            position: absolute; top: 70px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; padding: 15px;
+            background: rgba(255,255,255,0.1); border-radius: 10px; border: 1px solid #00ff88;
+        }
+        .stat { text-align: center; }
+        .stat-label { font-size: 12px; color: #888; }
+        .stat-value { font-size: 24px; color: #00ff88; font-weight: bold; }
+        
+        .game-area {
+            position: absolute; top: 150px; left: 20px; right: 20px; bottom: 100px;
+            background: rgba(0,0,0,0.3); border: 2px solid #00d4ff; border-radius: 15px;
+            overflow: hidden;
+        }
+        .health-bar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 20px; background: #333; border-radius: 10px; overflow: hidden;
+            border: 2px solid #ff4444;
+        }
+        .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8800); width: 100%; transition: width 0.3s; }
+        
+        .falling-word {
+            position: absolute; padding: 8px 16px; background: rgba(0,255,136,0.2);
+            border: 2px solid #00ff88; border-radius: 8px; font-size: 16px; font-weight: bold;
+            color: #fff; top: -50px; white-space: nowrap;
+        }
+        
+        .input-area {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 10px;
+            background: rgba(0,0,0,0.9); border-top: 2px solid #00ff88;
+            display: flex; gap: 10px;
+        }
+        .input-area input { flex: 1; margin: 0; font-size: 16px; }
+        .input-area button { width: auto; padding: 15px 25px; margin: 0; }
+        
+        .start-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 20; padding: 20px;
+        }
+        .mechanics { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin: 20px 0; max-width: 400px; font-size: 14px; line-height: 1.6; }
+        .mechanics h3 { color: #00ff88; margin-bottom: 10px; }
+        
+        .leaderboard-table { width: 100%; max-width: 600px; border-collapse: collapse; margin-top: 20px; }
+        .leaderboard-table th { background: #00ff88; color: #000; padding: 10px; }
+        .leaderboard-table td { padding: 10px; border-bottom: 1px solid #333; text-align: center; }
+        .rank-1 { color: gold; font-size: 20px; } .rank-2 { color: silver; } .rank-3 { color: #cd7f32; }
+        
+        .final-score { font-size: 60px; color: #00ff88; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="matrix-bg"><canvas id="matrixCanvas"></canvas></div>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <h1>⚡ EXE.CUTE</h1>
+        <h2>BSCS TYPING GAME</h2>
+        <input type="text" id="usernameInput" placeholder="ENTER USERNAME" maxlength="12">
+        <!-- KEY: ontouchstart para sa mobile, onclick para sa desktop -->
+        <button ontouchstart="startGame(event)" onclick="startGame(event)">▶ START GAME</button>
+        <button class="btn-secondary" ontouchstart="showLeaderboard(event)" onclick="showLeaderboard(event)">🏆 LEADERBOARD</button>
+    </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="game-screen" id="gameScreen">
+    <div class="game-header">
+        <div class="stat"><div class="stat-label">PLAYER</div><div class="stat-value" id="displayName">-</div></div>
+        <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value" id="scoreDisplay">0</div></div>
+        <div class="stat"><div class="stat-label">LEVEL</div><div class="stat-value" id="levelDisplay">1</div></div>
+    </div>
+    
+    <div class="game-area" id="gameArea">
+        <div class="health-bar"><div class="health-fill" id="healthFill"></div></div>
+        
+        <div class="start-overlay" id="startOverlay">
+            <h1>READY?</h1>
+            <div class="mechanics">
+                <h3>HOW TO PLAY:</h3>
+                <p>• Type the falling words<br>• Press ENTER or TAP GO<br>• Don't let words hit bottom!<br>• +10 points per word</p>
+            </div>
+            <button ontouchstart="beginGameplay(event)" onclick="beginGameplay(event)" style="font-size: 24px; padding: 20px 40px;">TAP TO START</button>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="wordInput" placeholder="Type here..." disabled>
+            <button id="goBtn" ontouchstart="submitWord(event)" onclick="submitWord(event)">GO</button>
+        </div>
+    </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="leaderboard-screen" id="leaderboardScreen">
+    <h1>🏆 TOP PLAYERS</h1>
+    <table class="leaderboard-table">
+        <thead><tr><th>Rank</th><th>Name</th><th>Score</th><th>Level</th></tr></thead>
+        <tbody id="leaderboardBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+    </table>
+    <button class="btn-secondary" onclick="backToMenu()" style="margin-top: 20px; width: auto; padding: 15px 40px;">BACK</button>
+</div>
+
+<!-- GAME OVER -->
+<div class="game-over" id="gameOver">
+    <h1 style="color: #ff4444;">GAME OVER</h1>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="rankDisplay" style="font-size: 20px; margin-bottom: 20px;">RANK: Newbie</p>
+    <p id="saveStatus" style="color: #00ff88; margin-bottom: 20px;"></p>
+    <button ontouchstart="restartGame(event)" onclick="restartGame(event)">PLAY AGAIN</button>
+    <button class="btn-secondary" ontouchstart="showLeaderboard(event)" onclick="showLeaderboard(event)">LEADERBOARD</button>
+    <button class="btn-secondary" onclick="location.reload()">MENU</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyB6uGSBBiC9iceNqmTra2TFuxfxeVFQYj0",
+        authDomain: "execute-game-de31c.firebaseapp.com",
+        databaseURL: "https://execute-game-de31c-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "execute-game-de31c",
+        storageBucket: "execute-game-de31c.firebasestorage.app",
+        messagingSenderId: "236094791995",
+        appId: "1:236094791995:web:6a51cd24a4df61285dd71e"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const scoresRef = ref(db, 'scores');
+    
+    const wordList = {
+        easy: ['int', 'char', 'if', 'for', 'while', 'return', 'class', 'null', 'true', 'false', 'void', 'else'],
+        medium: ['function', 'string', 'array', 'object', 'method', 'public', 'static', 'printf', 'scanf', 'struct'],
+        hard: ['algorithm', 'recursion', 'inheritance', 'polymorphism', 'encapsulation', 'constructor', 'exception'],
+        expert: ['quicksort', 'mergesort', 'binarysearch', 'linkedlist', 'hashtable', 'serialization']
+    };
+    
+    let gameState = { username: '', score: 0, level: 1, health: 100, isPlaying: false, words: [], wordIdCounter: 0 };
+    let spawnInterval, gameLoop;
+    
+    // Matrix background
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+    const drops = Array(Math.floor(canvas.width/14)).fill(1).map(() => Math.random() * -100);
+    setInterval(() => {
+        ctx.fillStyle = 'rgba(0,0,0,0.05)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#00ff88'; ctx.font = '14px monospace';
+        drops.forEach((y, i) => { ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*14, y); drops[i] = y > canvas.height && Math.random()>0.975 ? 0 : y+14; });
+    }, 50);
+    
+    // GLOBAL FUNCTIONS (para ma-access ng inline onclick/ontouchstart)
+    window.startGame = function(e) {
+        if(e) e.preventDefault();
+        const name = document.getElementById('usernameInput').value.trim();
+        if(!name) return alert('Enter username!');
+        gameState.username = name;
+        document.getElementById('displayName').textContent = name;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('gameScreen').style.display = 'flex';
+    };
+    
+    window.showLeaderboard = function(e) {
+        if(e) e.preventDefault();
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('gameOver').style.display = 'none';
+        document.getElementById('leaderboardScreen').style.display = 'flex';
+        
+        const q = query(scoresRef, orderByChild('score'), limitToLast(50));
+        onValue(q, (snap) => {
+            const scores = []; snap.forEach(c => scores.push(c.val()));
+            scores.sort((a,b) => b.score - a.score);
+            document.getElementById('leaderboardBody').innerHTML = scores.map((s,i) => 
+                `<tr><td class="rank-MATH_INLINE_0{i+1}</td><td>MATH_INLINE_1{s.score}</td><td>${s.level||0}</td></tr>`
+            ).join('') || '<tr><td colspan="4">No scores yet</td></tr>';
+        });
+    };
+    
+    window.backToMenu = function() {
+        document.getElementById('leaderboardScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+    };
+    
+    window.beginGameplay = function(e) {
+        if(e) e.preventDefault();
+        document.getElementById('startOverlay').style.display = 'none';
+        const inp = document.getElementById('wordInput');
+        inp.disabled = false;
+        inp.focus();
+        // Mobile keyboard fix
+        setTimeout(() => { inp.focus(); }, 100);
+        
+        gameState.isPlaying = true;
+        startSpawning();
+        requestAnimationFrame(updateGame);
+    };
+    
+    function spawnWord() {
+        if(!gameState.isPlaying) return;
+        const pool = gameState.level === 1 ? wordList.easy : gameState.level <= 3 ? [...wordList.easy, ...wordList.medium] : gameState.level <= 5 ? [...wordList.medium, ...wordList.hard] : [...wordList.hard, ...wordList.expert];
+        const word = pool[Math.floor(Math.random() * pool.length)];
+        const el = document.createElement('div');
+        el.className = 'falling-word';
+        el.textContent = word;
+        el.dataset.word = word;
+        el.style.left = Math.random() * (document.getElementById('gameArea').offsetWidth - 100) + 10 + 'px';
+        el.style.top = '-50px';
+        document.getElementById('gameArea').appendChild(el);
+        gameState.words.push({ el: el, word: word, y: -50, speed: 1 + (gameState.level * 0.5) });
+    }
+    
+    function startSpawning() {
+        spawnInterval = setInterval(spawnWord, Math.max(2000 - (gameState.level*200), 800));
+    }
+    
+    function updateGame() {
+        if(!gameState.isPlaying) return;
+        const bottom = document.querySelector('.input-area').getBoundingClientRect().top - document.getElementById('gameArea').getBoundingClientRect().top - 20;
+        
+        gameState.words = gameState.words.filter(w => {
+            w.y += w.speed;
+            w.el.style.top = w.y + 'px';
+            if(w.y >= bottom) {
+                w.el.remove();
+                gameState.health -= 15;
+                document.getElementById('healthFill').style.width = gameState.health + '%';
+                if(gameState.health <= 0) endGame();
+                return false;
+            }
+            return true;
+        });
+        requestAnimationFrame(updateGame);
+    }
+    
+    window.submitWord = function(e) {
+        if(e) e.preventDefault();
+        const input = document.getElementById('wordInput');
+        const typed = input.value.trim().toLowerCase();
+        if(!typed) return;
+        
+        const idx = gameState.words.findIndex(w => w.word === typed);
+        if(idx !== -1) {
+            gameState.words[idx].el.remove();
+            gameState.words.splice(idx, 1);
+            gameState.score += 10;
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+            
+            if(gameState.score % 100 === 0) {
+                gameState.level++;
+                document.getElementById('levelDisplay').textContent = gameState.level;
+                clearInterval(spawnInterval);
+                startSpawning();
+            }
+        }
+        input.value = '';
+        input.focus();
+    };
+    
+    document.getElementById('wordInput').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') submitWord();
+    });
+    
+    function endGame() {
+        gameState.isPlaying = false;
+        clearInterval(spawnInterval);
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('gameOver').style.display = 'flex';
+        document.getElementById('finalScore').textContent = gameState.score;
+        
+        const r = gameState.score < 50 ? 'Newbie' : gameState.score < 150 ? 'Student' : gameState.score < 300 ? 'Junior' : 'Senior';
+        document.getElementById('rankDisplay').textContent = 'RANK: ' + r;
+        
+        push(scoresRef, { username: gameState.username, score: gameState.score, level: gameState.level, timestamp: Date.now() })
+            .then(() => document.getElementById('saveStatus').textContent = 'Saved online!')
+            .catch(() => document.getElementById('saveStatus').textContent = 'Saved offline');
+    }
+    
+    window.restartGame = function(e) {
+        if(e) e.preventDefault();
+        gameState = { username: gameState.username, score: 0, level: 1, health: 100, isPlaying: false, words: [], wordIdCounter: 0 };
+        document.getElementById('scoreDisplay').textContent = '0';
+        document.getElementById('levelDisplay').textContent = '1';
+        document.getElementById('healthFill').style.width = '100%';
+        document.getElementById('gameOver').style.display = 'none';
+        document.getElementById('gameScreen').style.display = 'flex';
+        document.getElementById('startOverlay').style.display = 'flex';
+        document.getElementById('wordInput').disabled = true;
+        document.querySelectorAll('.falling-word').forEach(el => el.remove());
+    };
+</script>
+</body>
+</html>
